@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:developer';
 
+import 'package:chat_deme_with_supabase/module/register/login_page.dart';
 import 'package:flutter/material.dart';
 
 import 'package:timeago/timeago.dart';
@@ -42,29 +44,52 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
   }
 
-  // Future<void> _loadProfileCache(String profileId) async {
-  //   if (_profileCache[profileId] != null) {
-  //     return;
-  //   }
-  //   final res = await supabase
-  //       .from('profiles')
-  //       .select()
-  //       .match({'id': profileId})
-  //       .single()
-  //       .execute();
-  //   final data = res.data;
-  //   if (data != null) {
-  //     final profile = Profile.fromMap(data);
-  //     setState(() {
-  //       _profileCache[profileId] = profile;
-  //     });
-  //   }
-  // }
+  Future<void> _loadProfileCache(String profileId) async {
+    if (_profileCache[profileId] != null) {
+      return;
+    }
+    final res = await supabase
+        .from('profiles')
+        .select()
+        .match({'id': profileId})
+        .single()
+        .execute();
+    final data = res.data;
+    if (data != null) {
+      final profile = Profile.fromMap(data);
+      setState(() {
+        _profileCache[profileId] = profile;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
+      appBar: AppBar(
+        title: const Text('Chat'),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final response = await supabase.auth.signOut();
+              // ignore: use_build_context_synchronously
+              Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LoginPage(),
+                  ));
+              if (response.error == null) {
+                print('Signout Successfully');
+              } else {
+                log(response.error?.message ?? 'Error in signInMethod');
+              }
+            },
+            icon: const Icon(
+              Icons.logout,
+            ),
+          ),
+        ],
+      ),
       body: StreamBuilder<List<Message>>(
         stream: _messagesStream,
         builder: (context, snapshot) {
@@ -86,7 +111,7 @@ class _ChatPageState extends State<ChatPage> {
                             /// I know it's not good to include code that is not related
                             /// to rendering the widget inside build method, but for
                             /// creating an app quick and dirty, it's fine 😂
-                            // _loadProfileCache(message.profileId);
+                            _loadProfileCache(message.profileId);
 
                             return _ChatBubble(
                               message: message,
